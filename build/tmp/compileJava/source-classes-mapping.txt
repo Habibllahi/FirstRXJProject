@@ -1,3 +1,2 @@
 ng/com/codetrik/example/Main.java
  ng.com.codetrik.example.Main
- ng.com.codetrik.example.Main$Observer1
