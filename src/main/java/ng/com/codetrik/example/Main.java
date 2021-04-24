@@ -1,3 +1,5 @@
+package ng.com.codetrik.example;
+
 import io.reactivex.Observable;
 
 import java.util.Arrays;
