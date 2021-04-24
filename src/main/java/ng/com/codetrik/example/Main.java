@@ -1,96 +1,118 @@
 package ng.com.codetrik.example;
 
 import io.reactivex.Observable;
-import io.reactivex.Observer;
-import io.reactivex.annotations.NonNull;
-import io.reactivex.disposables.Disposable;
-
-import java.util.Arrays;
 
 public class Main {
     public static void main(String[] args){
-       createObservableWithJust();
-       createObservableFromIterable();
-       createObservableUsingCreate();
-       var observable = Observable.just(1,2,3,4,5,6,7,8,9,10);
-       //To create Observer, we need to implement Observer interface. This is no functional interface hence lambda cant help, we are left with using
-        //anonymous inner class or an inner class that implements the interface
-        observable.subscribe(new Main.Observer1());
-    }
-    public static void createObservableWithJust(){
-         var observable = Observable.just(1,2,3,4,5,6,7,8); //maximum emitted item is 10 when just() is use to create Observable
-         var disposable = observable.subscribe(System.out::println);
-    }
+        connectableObservableRunAsColdObservable();
+        /*
+          1)  The whole idea around connectable observable is not to start emitting item to subscriber until connect() method is called
+          2) or Automatically connect to start emitting item to subscribers when number of specified subscriber reached autoConnect(int noOfSubscriber)
+            it default to 1 subscriber when no value is passed.
+          3) it act HOT when connectable observer is created using publish() : it wont emmit to late subscriber(s)
+          4) it act COLD when connectable observer is created using replay() : it will replay emission to late subscriber(S)
 
-    public static void createObservableFromIterable(){
-        var list = Arrays.asList(9,10,11,12,13,14);
-        var observable = Observable.fromIterable(list);
-        var disposable = observable.subscribe(System.out::println);
-        disposable.dispose();
+          subscription is late for connectable subscriber when emission had already started by call of connect() or connection already get activated
+          after the number of subscriber specified in autoConnect(int noOfSubscriber) reached
+         */
     }
 
-    public static void createObservableUsingCreate(){
-        var observable = Observable.create(emitter -> {
-            emitter.onNext(15);
-            emitter.onNext(16);
-            emitter.onNext(17);
-            emitter.onComplete();
-        });
-        var disposable = observable.subscribe(System.out::println, error->System.out.println(error.getLocalizedMessage()),()->System.out.println("completed"));
+    private static void createColdObservable() {
+                    var observable = Observable.just(1,2,3,4,5,6,7,8,9,10);
+                    observable.subscribe(item ->System.out.println("observer 1: " + item));
+                    pause(5000L);
+                    observable.subscribe(item ->System.out.println("observer 2: " + item)); //this will also print from 1-10 despite it subscribed 5 seconds after
     }
 
-    private static class Observer1 implements Observer<Integer>{
+    private static void connectableObservableWithAutoConnectRunAsHotObservable(){
+            var connectableObservable = Observable.just(1,2,3,4,5,6,7,8,9,10).publish();
+            /*
+                Instructs the ConnectableObservable to automatically begin emitting the items from its underlying Observable to all its Observers
+                when number of subscriber reaches 1
+             */
 
-        /**
-         * Provides the Observer with the means of cancelling (disposing) the
-         * connection (channel) with the Observable in both
-         * synchronous (from within ) and asynchronous manner.
-         *
-         * @param d the Disposable instance whose {@link Disposable#dispose()} can
-         *          be called anytime to cancel the connection
-         * @since 2.0
-         */
-        @Override
-        public void onSubscribe(@NonNull Disposable d) {
-                System.out.println(this.getClass().getSimpleName() + " unsubscribed from listening to the observable");
-        }
+            var observable =connectableObservable.autoConnect();
+            observable.subscribe(item ->System.out.println("observer 1: " + item)); //emission begins and print all emitted item
+            observable.subscribe(item ->System.out.println("observer 2: " + item)); //this wont print as it joint late, all item already emitted
+            pause(1000l);
+            observable.subscribe(item ->System.out.println("observer 3: " + item));//this wont print either as it joint late, all item already emitted
+    }
 
-        /**
-         * Provides the Observer with a new item to observe.
-         * <p>
-         * The {@link Observable} may call this method 0 or more times.
-         * <p>
-         * The {@code Observable} will not call this method again after it calls either {@link #onComplete} or
-         * {@link #onError}.
-         *
-         * @param integer the item emitted by the Observable
-         */
-        @Override
-        public void onNext(@NonNull Integer integer) {
-            System.out.println(integer);
-        }
+    private static void connectableObservableWithAutoConnectRunAsColdObservable(){
+        var connectableObservable = Observable.just(1,2,3,4,5,6,7,8,9,10).replay();
+            /*
+                Instructs the ConnectableObservable to automatically begin emitting the items from its underlying Observable to all its Observers
+                when number of subscriber reaches 1
+             */
 
-        /**
-         * Notifies the Observer that the {@link Observable} has experienced an error condition.
-         * <p>
-         * If the {@link Observable} calls this method, it will not thereafter call {@link #onNext} or
-         * {@link #onComplete}.
-         *
-         * @param e the exception encountered by the Observable
-         */
-        @Override
-        public void onError(@NonNull Throwable e) {
-            System.out.println(e.getLocalizedMessage());
-        }
+        var observable =connectableObservable.autoConnect();
+        observable.subscribe(item ->System.out.println("observer 1: " + item)); //emission begins and print all emitted item
+        observable.subscribe(item ->System.out.println("observer 2: " + item)); //this will print as it joint late, observable will replay emission
+        pause(1000l);
+        observable.subscribe(item ->System.out.println("observer 3: " + item));//this will print as it joint late, observable will replay emission
+    }
 
-        /**
-         * Notifies the Observer that the {@link Observable} has finished sending push-based notifications.
-         * <p>
-         * The {@link Observable} will not call this method if it calls {@link #onError}.
+    private static void connectableObservableWithAutoConnectRunAsHotObservable(int noOfSubscriber){
+        var connectableObservable = Observable.just(1,2,3,4,5,6,7,8,9,10).publish();
+        /*
+            Instructs the ConnectableObservable to automatically begin emitting the items from its underlying Observable to all its Observers
+            when number of subscriber reaches number of specified subscribers
          */
-        @Override
-        public void onComplete() {
-            System.out.println("completed");
+        var observable =connectableObservable.autoConnect(noOfSubscriber);
+        observable.subscribe(item ->System.out.println("observer 1: " + item));
+        //if noOfSubscriber is 1, this wont print as it joint late, observable already complete emission
+        observable.subscribe(item ->System.out.println("observer 2: " + item));
+        pause(1000l);
+        //if noOfSubscriber is 2, this wont print as it joint late, observable already complete emission
+        observable.subscribe(item ->System.out.println("observer 3: " + item));
+    }
+
+    private static void connectableObservableWithAutoConnectRunAsColdObservable(int noOfSubscriber){
+        var connectableObservable = Observable.just(1,2,3,4,5,6,7,8,9,10).replay();
+        /*
+            Instructs the ConnectableObservable to automatically begin emitting the items from its underlying Observable to all its Observers
+            when number of subscriber reaches number of specified subscribers
+         */
+        var observable =connectableObservable.autoConnect(noOfSubscriber);
+        observable.subscribe(item ->System.out.println("observer 1: " + item));
+        //if noOfSubscriber is 1, this will print as it joint late, observable will replay emission
+        observable.subscribe(item ->System.out.println("observer 2: " + item));
+        pause(1000l);
+        //if noOfSubscriber is 2, this will print as it joint late, observable will replay emission
+        observable.subscribe(item ->System.out.println("observer 3: " + item));
+    }
+
+    private static void connectableObservableRunAsHotObservable() {
+        var connectableObservable = Observable.just(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).publish();
+        /*
+            Instructs the ConnectableObservable to begin emitting the items from its underlying Observable to all its Observers by only
+            when connect() is called.
+         */
+        connectableObservable.subscribe(item -> System.out.println("observer 1: " + item));
+        connectableObservable.subscribe(item -> System.out.println("observer 2: " + item));
+
+        connectableObservable.connect();//emission only begin now
+        connectableObservable.subscribe(item -> System.out.println("observer 3: " + item)); //this wont print as it subscribed late, all item emitted
+    }
+
+    private static void connectableObservableRunAsColdObservable() {
+        var connectableObservable = Observable.just(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).replay();
+        /*
+            Instructs the ConnectableObservable to begin emitting the items from its underlying Observable to all its Observers by only
+            when connect() is called.
+         */
+        connectableObservable.subscribe(item -> System.out.println("observer 1: " + item));
+        connectableObservable.subscribe(item -> System.out.println("observer 2: " + item));
+
+        connectableObservable.connect();//emission only begin now
+        connectableObservable.subscribe(item -> System.out.println("observer 3: " + item)); //this will print as it subscribed late, observable replays emmission
+    }
+
+    public static void pause(long duration){
+        try {
+            Thread.sleep(duration);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
