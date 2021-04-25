@@ -4,28 +4,20 @@ import io.reactivex.Observable;
 
 public class Main {
     public static void main(String[] args){
-        createObservableUsingNever();
+        createObserverUsingRangeAsColdObservable();
     }
-    private static void createObservableUsingEmpty(){
-        //create an Observable that emits no items to the Observer and immediately invokes its onComplete method.
-        var observable = Observable.empty();
-        observable.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
-    }
-
-    private static void createObservableUsingNever(){
-        //create an Observable that never sends any items or notifications to an Observer.
-        var observable = Observable.never();
-        observable.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
+    public static void createObserverUsingRangeAsColdObservable(){
+        var observer = Observable.range(0,10);
+        observer.subscribe((item)->System.out.println("observer 1 : "+ item));
+        pause(5000L);
+        observer.subscribe((item)->System.out.println("observer 2 : "+ item));
     }
 
-    private static void createObservableUsingError(){
-        //create an Observable that invokes an Observer's onError method when the Observer subscribes to it.
-        var observable1 = Observable.error(()->new Exception("each subscriber will have unique instance of error passed to it"));
-        var observable2 = Observable.error(new Exception("each subscriber will have same instance of error passed to it"));
-        observable1.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
-        observable1.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
-        observable2.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
-        observable2.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
+    private static void pause(long l) {
+        try {
+            Thread.sleep(l);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
-
 }
