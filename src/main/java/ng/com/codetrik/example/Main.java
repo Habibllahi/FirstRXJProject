@@ -4,15 +4,28 @@ import io.reactivex.Observable;
 
 public class Main {
     public static void main(String[] args){
-        //pass an Observable that invokes observer's onError() upon the observer subscription
-        var observable = Observable.just(1, 2, 3, 4, 5);
-        throwException(observable.error(new Exception("An error"))); //(1) and (2) will print same hash code, the observable wont emit items
-        throwException(observable.error(()->new Exception("An Error")));// (1) and (2) will print different hash code,the observable wont emit items
+        createObservableUsingNever();
     }
-    private static void throwException(Observable observable){
-        //create an Observable that invokes observer's onError() upon the observer subscription
-        observable.subscribe(System.out::println, throwable -> System.out.println("Error1 "+throwable.hashCode())); //(1)
-        observable.subscribe(System.out::println, throwable -> System.out.println("Error2 "+throwable.hashCode())); //(2)
+    private static void createObservableUsingEmpty(){
+        //create an Observable that emits no items to the Observer and immediately invokes its onComplete method.
+        var observable = Observable.empty();
+        observable.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
+    }
+
+    private static void createObservableUsingNever(){
+        //create an Observable that never sends any items or notifications to an Observer.
+        var observable = Observable.never();
+        observable.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
+    }
+
+    private static void createObservableUsingError(){
+        //create an Observable that invokes an Observer's onError method when the Observer subscribes to it.
+        var observable1 = Observable.error(()->new Exception("each subscriber will have unique instance of error passed to it"));
+        var observable2 = Observable.error(new Exception("each subscriber will have same instance of error passed to it"));
+        observable1.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
+        observable1.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
+        observable2.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
+        observable2.subscribe(System.out::println,System.out::println,()->System.out.println("Completed"));
     }
 
 }
