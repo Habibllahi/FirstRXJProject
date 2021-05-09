@@ -1,52 +1,76 @@
 package ng.com.codetrik.example;
 
-import io.reactivex.Completable;
-import io.reactivex.Single;
+import io.reactivex.Observable;
 
-import java.lang.reflect.Array;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args){
-      single(Arrays.asList("am singular"));
-      writeToDatabase("pas").subscribe(()->System.out.println("completed"),error->System.out.println(error));
+     var list = Arrays.asList(1,2,3,4,5,6,7,8,9,0);
+      var unCachedObservable = unCachedObservable(list);
+      var cachedObservable = cachedObservable(list);
+
+        cachedObservable.subscribe((item)->{
+          System.out.println(Thread.currentThread().getName() + " : " + item + ": subscriber 1");
+      },System.out::println);
+
+        cachedObservable.subscribe((item)->{
+            System.out.println(Thread.currentThread().getName() + " : " + item + ": subscriber 2");
+        },System.out::println);
     }
 
-    private static void single(List<String> source){
+    private static Observable<BigInteger> infiniteStream(){
+        return Observable.<BigInteger>create(
+                emitter -> new Thread(()->{
+
+                    BigInteger i = BigInteger.ZERO;
+                    while (!emitter.isDisposed()){
+                        emitter.onNext(i);
+                        i = i.add(BigInteger.ONE);
+                    }
+                }).start()
+        );
+    }
+
+    private static Observable<Integer> cachedObservable(List<Integer> source){
         /*
-            *Single in RXJava is use as replacement for Future<T>. See it like a lazy equivalent of Future<T>
-            *Single will push a single data by calling the onSuccess() and will throw error by calling the onError() method
-            *It can be subscribed to like an observable and wont execute its enclosing codes until it being subscribed to because Single is as well lazy
+        when an observable is cached, the RX will not create new instance of the ObservableOnSubscribe object (implemented via the lambda) every time
+        a new subscription is made. It create the new instance of the ObservableOnSubscribe object once and cache the outcome. This outcome is provided
+        to new subscriber
          */
-        var single = Single.<String>create(emitter -> {
-           if(source.size()==1)
-               emitter.onSuccess(source.get(0));
-           else
-               emitter.onError(new Exception("The source can only have single data"));
-        }).subscribe(data->System.out.println(data),error->System.out.println(error));
+        return Observable.<Integer>create(
+                emitter -> {
+                    System.out.println("thread created");
+                    source.forEach((listItem)->emitter.onNext(listItem));
+
+                }
+        ).cache();
     }
 
-    private static Completable writeToDatabase(String demoState){
+    private static Observable<Integer> unCachedObservable(List<Integer> source){
         /*
-        completable is like Single<Void>. Use when we just want to indicate if a task is run to completion or failed.
-        It is LAZY as well.
-        A good example (not demonstrated here) is if we want to asynchronously perform an action on the server, we want to notify if successful or failed
+        when an observable is not cached, the RX will create new instance of the ObservableOnSubscribe object (implemented via the lambda) every time
+        a new subscription is made. By doing so it can emit for each subscriber independently
          */
-        return Completable.create(emitter -> {
-            if (demoState.equals("pass"))
-                //do somethings
-                emitter.onComplete();
-            else
-                emitter.onError(new Throwable("task was not successfully executed"));
-        });
-    }
+        return Observable.<Integer>create(
+                emitter -> {
+                    System.out.println("thread created");
+                    source.forEach((listItem)->emitter.onNext(listItem));
 
+                }
+        );
+    }
     private static void pause(long l) {
         try {
             Thread.sleep(l);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private static void noMore(){
+        System.out.println("completed");
     }
 }
