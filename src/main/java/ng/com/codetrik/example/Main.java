@@ -11,7 +11,7 @@ public class Main {
             it default to 1 subscriber when no value is passed.
           3) it act HOT when connectable observer is created using publish() : it wont emmit to late subscriber(s)
           4) it act COLD when connectable observer is created using replay() : it will replay emission to late subscriber(S)
-          5) However, both HOT and COLD connectable observer will emit to all subscriber that subscribe before connection was made
+          5) However, both HOT and COLD connectable observer will COLDLY emit to all subscriber that subscribe before connection was made. 
 
           subscription is late for connectable subscriber when emission had already started by call of connect() or connection already get activated
           after the number of subscriber specified in autoConnect(int noOfSubscriber) reached
